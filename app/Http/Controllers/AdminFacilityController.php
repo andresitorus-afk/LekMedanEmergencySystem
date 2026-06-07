@@ -2,41 +2,51 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Facility;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class AdminFacilityController extends Controller
 {
-    // Menampilkan daftar fasilitas di dashboard
-    public function index() {
-        $facilities = Facility::latest()->get();
-        return view('admin.dashboard', compact('facilities'));
+    public function index()
+    {
+        $facilities = DB::table('facilities')->get();
+        return view('dashboard', compact('facilities'));
     }
 
-    // Menampilkan form tambah
-    public function create() {
+    public function create()
+    {
         return view('admin.create');
     }
 
-    // Menyimpan data ke PostgreSQL
-    public function store(Request $request) {
+    public function store(Request $request)
+    {
         $request->validate([
-            'nama' => 'required',
-            'kategori' => 'required',
-            'alamat' => 'required',
+            'nama' => 'required|string|max:255',
+            'kategori' => 'required|string',
+            'alamat' => 'required|string',
             'lat' => 'required|numeric',
             'lng' => 'required|numeric',
+            'telepon' => 'nullable|string',
         ]);
 
-        Facility::create($request->all());
+        DB::table('facilities')->insert([
+            'nama' => $request->nama,
+            'kategori' => $request->kategori,
+            'alamat' => $request->alamat,
+            'lat' => $request->lat,
+            'lng' => $request->lng,
+            'telepon' => $request->telepon,
+            'geom' => DB::raw("ST_SetSRID(ST_MakePoint(" . floatval($request->lng) . ", " . floatval($request->lat) . "), 4326)"),
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
 
-        return redirect()->route('dashboard')->with('success', 'Lokasi berhasil ditambahkan!');
+        return redirect()->route('dashboard')->with('success', 'Fasilitas baru berhasil ditambahkan!');
     }
+
     public function destroy($id)
     {
-        $facility = Facility::findOrFail($id);
-        $facility->delete();
-
-        return redirect()->route('dashboard')->with('success', 'Data lokasi berhasil dihapus!');
+        DB::table('facilities')->where('id', $id)->delete();
+        return redirect()->route('dashboard')->with('success', 'Fasilitas berhasil dihapus dari database!');
     }
 }
